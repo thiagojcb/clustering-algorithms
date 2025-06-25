@@ -78,11 +78,12 @@ def plot_results(data, labels, centers, title, noise=None):
     plt.scatter(data[:, 0], data[:, 1], c=labels, cmap='viridis', alpha=0.6)
     if noise is not None:
         plt.scatter(data[noise, 0], data[noise, 1], c='red', marker='x', label='Noise')
-    plt.scatter(centers[:, 0], centers[:, 1], s=300, c='blue', marker='X', label='Centers')
     plt.title(title)
     plt.xlabel('X')
     plt.ylabel('Y')
-    plt.legend()
+    if len(centers)>0:
+        plt.scatter(centers[:, 0], centers[:, 1], s=300, c='blue', marker='X', label='Centers')
+        plt.legend()
     plt.show()
 
 def main():
