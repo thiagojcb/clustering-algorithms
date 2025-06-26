@@ -65,21 +65,30 @@ def plot_sipm_pos(positions, title, labels=None, centers=None, noise=None, is_cl
     plt.ylabel('Y (mm)')
     plt.show()
 
-def cluster_data(pmt_dict, output_tree, eps=30, min_samples=5):
+def cluster_data(pmt_dict, output_tree, eps=30, min_samples=5, apply_energy_cut=True, apply_position_cut=False):
     nentries = output_tree.num_entries
-
     # Loop over simulation data, apply DBSCAN and do a simple analysis
     for i in range(0,nentries):
         if i>5: # only want to check a few events
             break
-        
-        # get the energy of the event
+
+        # get the energy of the particle
         energy = (ak.to_numpy(output_tree["scintEdepQuenched"].array()[i]))[0]
 
-        if energy>1.5 and energy<2.0: # apply DBSCAN only on events with specific energy
+        # get the position of the particle
+        mcx = (ak.to_numpy(output_tree["mcx"].array()[i]))[0]
+        mcy = (ak.to_numpy(output_tree["mcy"].array()[i]))[0]
+        mcz = (ak.to_numpy(output_tree["mcz"].array()[i]))[0]
 
+        rho = np.sqrt(mcx*mcx+mcy*mcy)
+
+        # Apply energy and position cuts conditionally
+        energy_cut = (1.5 < energy < 2.0) if apply_energy_cut else True
+        position_cut = (-1500 < mcz < 1500 and rho < 500) if apply_position_cut else True
+
+        if energy_cut and position_cut:
             points = get_pmts_pos(i,output_tree, pmt_dict)
-            plot_sipm_pos(points, f'SiPM positions, event {i}') # just checking the positions
+            # plot_sipm_pos(points, f'SiPM positions, event {i}') # just checking the positions
 
             dbscan_labels, dbscan_centers = cluster_algos.apply_dbscan(points, eps=eps, min_samples=min_samples)
 
@@ -88,7 +97,7 @@ def cluster_data(pmt_dict, output_tree, eps=30, min_samples=5):
             unique_labels = np.unique(dbscan_labels)
             unique_labels = len(unique_labels) - 1 # removing the noise label
             nclustered = np.count_nonzero(dbscan_labels > -1)
-            print(f'Clustered {nclustered} out of {npoints} SiPMs, in {unique_labels} clusters')
+            print(f'Clustered {nclustered} out of {npoints} SiPMs, in {unique_labels} clusters.')
 
             # plot result
             plot_sipm_pos(points, f'DBSCAN Clustering event {i}, Energy {energy:.2f} MeV', labels=dbscan_labels, centers=dbscan_centers, is_clustered=True)
