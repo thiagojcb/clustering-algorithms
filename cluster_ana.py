@@ -39,9 +39,28 @@ def get_pmts_pos(i,output_tree, pmt_dict):
 
     return points
 
-def plot_sipm_pos(i, positions):
-    plt.scatter(positions[:, 0], positions[:, 1], c='black', alpha=0.6)
-    plt.title(f'SiPM positions, event {i}')
+def plot_sipm_pos(positions, title, labels=None, centers=None, noise=None, is_clustered=False):
+
+    if not is_clustered:
+        plt.scatter(positions[:, 0], positions[:, 1], c='black', alpha=0.6)
+        
+    else:
+        plt.scatter(positions[:, 0], positions[:, 1], c=labels, cmap='viridis', alpha=0.6)
+        if noise is not None:
+            plt.scatter(positions[noise, 0], positions[noise, 1], c='red', marker='x', label='Noise')
+        if len(centers)>0:
+            plt.scatter(centers[:, 0], centers[:, 1], s=300, c='blue', marker='X', label='Centers')
+            plt.legend()
+
+    # Add dashed circle representing detector size
+    circle = plt.Circle((0, 0), 900, color='blue', linestyle='--', fill=False)
+    plt.gca().add_artist(circle)
+
+    # Set custom x and y axis ranges
+    plt.xlim(-950, 950)
+    plt.ylim(-950, 950)
+    
+    plt.title(title)
     plt.xlabel('X (mm)')
     plt.ylabel('Y (mm)')
     plt.show()
@@ -60,7 +79,7 @@ def cluster_data(pmt_dict, output_tree, eps=30, min_samples=5):
         if energy>1.5 and energy<2.0: # apply DBSCAN only on events with specific energy
 
             points = get_pmts_pos(i,output_tree, pmt_dict)
-            # plot_sipm_pos(i, points) # just checking the positions
+            plot_sipm_pos(points, f'SiPM positions, event {i}') # just checking the positions
 
             dbscan_labels, dbscan_centers = cluster_algos.apply_dbscan(points, eps=eps, min_samples=min_samples)
 
@@ -72,7 +91,7 @@ def cluster_data(pmt_dict, output_tree, eps=30, min_samples=5):
             print(f'Clustered {nclustered} out of {npoints} SiPMs, in {unique_labels} clusters')
 
             # plot result
-            cluster_algos.plot_results(points, dbscan_labels, dbscan_centers, f'DBSCAN Clustering event {i}, Energy {energy:.2f} MeV')
+            plot_sipm_pos(points, f'DBSCAN Clustering event {i}, Energy {energy:.2f} MeV', labels=dbscan_labels, centers=dbscan_centers, is_clustered=True)
 
 def main():
     
